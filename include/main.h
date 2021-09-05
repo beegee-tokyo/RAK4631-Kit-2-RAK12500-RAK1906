@@ -37,7 +37,7 @@
 // Main loop stuff
 void periodic_wakeup(TimerHandle_t unused);
 extern SemaphoreHandle_t g_task_sem;
-extern uint16_t g_task_event_type;
+extern volatile uint16_t g_task_event_type;
 extern SoftwareTimer g_task_wakeup_timer;
 
 /** Wake up events, more events can be defined in app.h */

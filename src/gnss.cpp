@@ -28,6 +28,9 @@ bool last_read_ok = false;
 /** Flag if GNSS is serial or I2C */
 bool i2c_gnss = false;
 
+/** Switch between GNSS on/off (1) and GNSS power save mode (0)*/
+#define GNSS_OFF 0
+
 /**
  * @brief Initialize the GNSS
  * 
@@ -133,8 +136,10 @@ bool poll_gnss(void)
 		ble_uart.println("poll_gnss");
 	}
 
+#if GNSS_OFF == 1
 	// Start connection
 	init_gnss();
+#endif
 
 	// delay(100);
 	time_t time_out = millis();
@@ -160,14 +165,17 @@ bool poll_gnss(void)
 		else if (fix_type == 5)
 			sprintf(fix_type_str, "Time fix");
 
-		// if (ble_uart_is_connected)
-		// {
-		// 	ble_uart.printf("Fixtype: %d %s\n", fix_type, fix_type_str);
-		// }
+		if (ble_uart_is_connected)
+		{
+			ble_uart.printf("Fixtype: %d %s\n", fix_type, fix_type_str);
+			ble_uart.printf("SIV: %d\n", my_gnss.getSIV());
+		}
 
 		// if (my_gnss.getGnssFixOk())
-		if (fix_type > 2)
+		// if ((fix_type >= 3) && (my_gnss.getSIV() >= 5))
+		if (fix_type >= 3)
 		{
+			digitalWrite(LED_CONN, HIGH);
 			has_pos = true;
 			last_read_ok = true;
 			latitude = my_gnss.getLatitude();
@@ -213,14 +221,18 @@ bool poll_gnss(void)
 		}
 	}
 
+#if GNSS_OFF == 1
 	// Power down the module
 	digitalWrite(WB_IO2, LOW);
 	delay(100);
+#endif
 
 	if (has_pos)
 	{
-		// my_gnss.powerSaveMode(true);
-		// my_gnss.setMeasurementRate(10000);
+#if GNSS_OFF == 0
+		my_gnss.powerSaveMode(true);
+		my_gnss.setMeasurementRate(10000);
+#endif
 		return true;
 	}
 
@@ -230,6 +242,11 @@ bool poll_gnss(void)
 		ble_uart.println("\nNo valid location found");
 	}
 	last_read_ok = false;
-	// my_gnss.setMeasurementRate(1000);
+
+	digitalWrite(LED_CONN, LOW);
+
+#if GNSS_OFF == 0
+	my_gnss.setMeasurementRate(1000);
+#endif
 	return false;
 }

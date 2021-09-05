@@ -55,7 +55,7 @@ void init_ble(void)
 	Bluefruit.begin(1, 0);
 
 	// Set max power. Accepted values are: (min) -40, -20, -16, -12, -8, -4, 0, 2, 3, 4, 5, 6, 7, 8 (max)
-	Bluefruit.setTxPower(-40);
+	Bluefruit.setTxPower(0);
 
 #ifdef NO_BLE_LED
 	Bluefruit.autoConnLed(false);

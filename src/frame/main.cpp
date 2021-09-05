@@ -18,7 +18,7 @@ SemaphoreHandle_t g_task_sem = NULL;
 SoftwareTimer g_task_wakeup_timer;
 
 /** Flag for the event type */
-uint16_t g_task_event_type = NO_EVENT;
+volatile uint16_t g_task_event_type = NO_EVENT;
 
 /** Flag if BLE should be enabled */
 bool enable_ble = false;
