@@ -41,6 +41,7 @@ The application does switch off the GPS module and the MCU and LoRa transceiver 
 - [SX126x-Arduino LoRaWAN library](https://github.com/beegee-tokyo/SX126x-Arduino)
 - [SparkFun u-blox GNSS Arduino Library](https://platformio.org/lib/show/11715/SparkFun%20u-blox%20GNSS%20Arduino%20Library)
 - [Adafruit BME680 Library](https://platformio.org/lib/show/1922/Adafruit%20BME680%20Library)
+- [WisBlock API](https://github.com/beegee-tokyo/WisBlock-API)
 
 ## _REMARK_
 The libraries are all listed in the **`platformio.ini`** and are automatically installed when the project is compiled.
@@ -120,5 +121,6 @@ lib_deps =
 	beegee-tokyo/SX126x-Arduino
 	sparkfun/SparkFun u-blox GNSS Arduino Library@2.0.13
 	adafruit/Adafruit BME680 Library
+	https://github.com/beegee-tokyo/WisBlock-API
 extra_scripts = pre:rename.py
 ```
