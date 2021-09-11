@@ -5,6 +5,8 @@
 ----
 
 # RAK4631-Kit-2-RAK12500-RAK1906
+| <img src="./assets/RAK-Whirls.png" alt="Modules" width="150"> | <img src="./assets/rakstar.jpg" alt="RAKstar" width="100"> |    
+| :-: | :-: |     
 This is an example code for WisBlock GNSS tracker with RAK12500 GNSS module and RAK1906 environment sensor
 
 ## _REMARK 1_

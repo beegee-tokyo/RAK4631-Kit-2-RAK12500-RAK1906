@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2020
  * 
  */
-#include "main.h"
+#include "app.h"
 
 // The GNSS object
 SFE_UBLOX_GNSS my_gnss;
@@ -52,18 +52,18 @@ bool init_gnss(void)
 	if (!my_gnss.begin())
 	{
 		MYLOG("GNSS", "UBLOX did not answer on I2C, retry on Serial1");
-		if (ble_uart_is_connected)
+		if (g_ble_uart_is_connected)
 		{
-			ble_uart.println("UBLOX did not answer on I2C, retry on Serial1");
+			g_ble_uart.println("UBLOX did not answer on I2C, retry on Serial1");
 		}
 		i2c_gnss = false;
 	}
 	else
 	{
 		MYLOG("GNSS", "UBLOX found on I2C");
-		if (ble_uart_is_connected)
+		if (g_ble_uart_is_connected)
 		{
-			ble_uart.println("UBLOX found on I2C");
+			g_ble_uart.println("UBLOX found on I2C");
 		}
 		i2c_gnss = true;
 		gnss_found = true;
@@ -84,9 +84,9 @@ bool init_gnss(void)
 			{
 				MYLOG("GNSS", "UBLOX found on Serial1 with 38400");
 				my_gnss.setUART1Output(COM_TYPE_UBX); //Set the UART port to output UBX only
-				if (ble_uart_is_connected)
+				if (g_ble_uart_is_connected)
 				{
-					ble_uart.println("UBLOX found on Serial1 with 38400");
+					g_ble_uart.println("UBLOX found on Serial1 with 38400");
 				}
 				gnss_found = true;
 
@@ -131,9 +131,9 @@ bool init_gnss(void)
 bool poll_gnss(void)
 {
 	MYLOG("GNSS", "poll_gnss");
-	if (ble_uart_is_connected)
+	if (g_ble_uart_is_connected)
 	{
-		ble_uart.println("poll_gnss");
+		g_ble_uart.println("poll_gnss");
 	}
 
 #if GNSS_OFF == 1
@@ -165,10 +165,10 @@ bool poll_gnss(void)
 		else if (fix_type == 5)
 			sprintf(fix_type_str, "Time fix");
 
-		if (ble_uart_is_connected)
+		if (g_ble_uart_is_connected)
 		{
-			ble_uart.printf("Fixtype: %d %s\n", fix_type, fix_type_str);
-			ble_uart.printf("SIV: %d\n", my_gnss.getSIV());
+			g_ble_uart.printf("Fixtype: %d %s\n", fix_type, fix_type_str);
+			g_ble_uart.printf("SIV: %d\n", my_gnss.getSIV());
 		}
 
 		// if (my_gnss.getGnssFixOk())
@@ -191,11 +191,11 @@ bool poll_gnss(void)
 			MYLOG("GNSS", "Lat: %.4f Lon: %.4f", latitude / 10000000.0, longitude / 10000000.0);
 			MYLOG("GNSS", "Alt: %.2f", altitude / 1000.0);
 
-			if (ble_uart_is_connected)
+			if (g_ble_uart_is_connected)
 			{
-				ble_uart.printf("Fixtype: %d %s\n", my_gnss.getFixType(), fix_type_str);
-				ble_uart.printf("Lat: %.4f Lon: %.4f\n", latitude / 10000000.0, longitude / 10000000.0);
-				ble_uart.printf("Alt: %.2f\n", altitude / 1000.0);
+				g_ble_uart.printf("Fixtype: %d %s\n", my_gnss.getFixType(), fix_type_str);
+				g_ble_uart.printf("Lat: %.4f Lon: %.4f\n", latitude / 10000000.0, longitude / 10000000.0);
+				g_ble_uart.printf("Alt: %.2f\n", altitude / 1000.0);
 			}
 			pos_union.val32 = latitude / 1000;
 			g_tracker_data.lat_1 = pos_union.val8[2];
@@ -237,9 +237,9 @@ bool poll_gnss(void)
 	}
 
 	MYLOG("GNSS", "No valid location found");
-	if (ble_uart_is_connected)
+	if (g_ble_uart_is_connected)
 	{
-		ble_uart.println("\nNo valid location found");
+		g_ble_uart.println("\nNo valid location found");
 	}
 	last_read_ok = false;
 

@@ -17,6 +17,9 @@
 /** Add you required includes after Arduino.h */
 #include <Wire.h>
 
+/** Include the SX126x-API */
+#include <WisBlock-API.h> // Click to install library: http://librarymanager/All#WisBlock-API
+
 /** Application function definitions */
 void setup_app(void);
 bool init_app(void);
@@ -25,7 +28,7 @@ void ble_data_handler(void) __attribute__((weak));
 void lora_data_handler(void);
 
 /** Examples for application events */
-#define ACC_TRIGGER 0b1000000000000000
+#define ACC_TRIGGER   0b1000000000000000
 #define N_ACC_TRIGGER 0b0111111111111111
 
 /** Application stuff */
