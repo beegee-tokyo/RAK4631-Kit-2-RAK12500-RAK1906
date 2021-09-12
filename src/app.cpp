@@ -160,37 +160,44 @@ void app_event_handler(void)
 			// Just in case
 			delayed_active = false;
 
-			Serial.printf("%02X", g_tracker_data.data_flag1);
-			Serial.printf("%02X", g_tracker_data.data_flag2);
-			Serial.printf("%02X", g_tracker_data.lat_1);
-			Serial.printf("%02X", g_tracker_data.lat_2);
-			Serial.printf("%02X", g_tracker_data.lat_3);
-			Serial.printf("%02X", g_tracker_data.long_1);
-			Serial.printf("%02X", g_tracker_data.long_2);
-			Serial.printf("%02X", g_tracker_data.long_3);
-			Serial.printf("%02X", g_tracker_data.alt_1);
-			Serial.printf("%02X", g_tracker_data.alt_2);
-			Serial.printf("%02X", g_tracker_data.alt_3);
-			Serial.printf("%02X", g_tracker_data.data_flag3);
-			Serial.printf("%02X", g_tracker_data.data_flag4);
-			Serial.printf("%02X", g_tracker_data.batt_1);
-			Serial.printf("%02X", g_tracker_data.batt_2);
-			Serial.printf("%02X", g_tracker_data.data_flag5);
-			Serial.printf("%02X", g_tracker_data.data_flag6);
-			Serial.printf("%02X", g_tracker_data.humid_1);
-			Serial.printf("%02X", g_tracker_data.data_flag7);
-			Serial.printf("%02X", g_tracker_data.data_flag8);
-			Serial.printf("%02X", g_tracker_data.temp_1);
-			Serial.printf("%02X", g_tracker_data.temp_2);
-			Serial.printf("%02X", g_tracker_data.data_flag9);
-			Serial.printf("%02X", g_tracker_data.data_flag10);
-			Serial.printf("%02X", g_tracker_data.press_1);
-			Serial.printf("%02X", g_tracker_data.press_2);
-			Serial.printf("%02X", g_tracker_data.data_flag11);
-			Serial.printf("%02X", g_tracker_data.data_flag12);
-			Serial.printf("%02X", g_tracker_data.gas_1);
-			Serial.printf("%02X", g_tracker_data.gas_2);
+#if MY_DEBUG == 1
+			uint8_t *packet = &g_tracker_data.data_flag1;
+			for (int idx = 0; idx < TRACKER_DATA_LEN; idx++)
+			{
+				Serial.printf("%02X", packet[idx]);
+			}
+			// Serial.printf("%02X", g_tracker_data.data_flag1);
+			// Serial.printf("%02X", g_tracker_data.data_flag2);
+			// Serial.printf("%02X", g_tracker_data.lat_1);
+			// Serial.printf("%02X", g_tracker_data.lat_2);
+			// Serial.printf("%02X", g_tracker_data.lat_3);
+			// Serial.printf("%02X", g_tracker_data.long_1);
+			// Serial.printf("%02X", g_tracker_data.long_2);
+			// Serial.printf("%02X", g_tracker_data.long_3);
+			// Serial.printf("%02X", g_tracker_data.alt_1);
+			// Serial.printf("%02X", g_tracker_data.alt_2);
+			// Serial.printf("%02X", g_tracker_data.alt_3);
+			// Serial.printf("%02X", g_tracker_data.data_flag3);
+			// Serial.printf("%02X", g_tracker_data.data_flag4);
+			// Serial.printf("%02X", g_tracker_data.batt_1);
+			// Serial.printf("%02X", g_tracker_data.batt_2);
+			// Serial.printf("%02X", g_tracker_data.data_flag5);
+			// Serial.printf("%02X", g_tracker_data.data_flag6);
+			// Serial.printf("%02X", g_tracker_data.humid_1);
+			// Serial.printf("%02X", g_tracker_data.data_flag7);
+			// Serial.printf("%02X", g_tracker_data.data_flag8);
+			// Serial.printf("%02X", g_tracker_data.temp_1);
+			// Serial.printf("%02X", g_tracker_data.temp_2);
+			// Serial.printf("%02X", g_tracker_data.data_flag9);
+			// Serial.printf("%02X", g_tracker_data.data_flag10);
+			// Serial.printf("%02X", g_tracker_data.press_1);
+			// Serial.printf("%02X", g_tracker_data.press_2);
+			// Serial.printf("%02X", g_tracker_data.data_flag11);
+			// Serial.printf("%02X", g_tracker_data.data_flag12);
+			// Serial.printf("%02X", g_tracker_data.gas_1);
+			// Serial.printf("%02X", g_tracker_data.gas_2);
 			Serial.println("");
+#endif
 
 			lmh_error_status result = send_lora_packet((uint8_t *)&g_tracker_data, TRACKER_DATA_LEN);
 			switch (result)
