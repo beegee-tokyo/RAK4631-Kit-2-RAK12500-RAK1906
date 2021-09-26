@@ -13,6 +13,14 @@
 // The GNSS object
 SFE_UBLOX_GNSS my_gnss;
 
+/** LoRa task handle */
+TaskHandle_t gnss_task_handle;
+/** GPS reading task */
+void gnss_task(void *pvParameters);
+
+/** Semaphore for GNSS aquisition task */
+SemaphoreHandle_t g_gnss_sem;
+
 /** GNSS polling function */
 bool poll_gnss(void);
 
@@ -29,7 +37,7 @@ bool last_read_ok = false;
 bool i2c_gnss = false;
 
 /** Switch between GNSS on/off (1) and GNSS power save mode (0)*/
-#define GNSS_OFF 0
+#define GNSS_OFF 1
 
 /**
  * @brief Initialize the GNSS
@@ -148,7 +156,24 @@ bool poll_gnss(void)
 	int64_t longitude = 0;
 	int32_t altitude = 0;
 
-	while ((millis() - time_out) < 60000)
+	time_t check_limit = 90000;
+
+	if (g_lorawan_settings.send_repeat_time == 0)
+	{
+		check_limit = 90000;
+	}
+	else if (g_lorawan_settings.send_repeat_time <= 90000)
+	{
+		check_limit = g_lorawan_settings.send_repeat_time / 2;
+	}
+	else
+	{
+		check_limit = 90000;
+	}
+
+	MYLOG("GNSS", "GNSS timeout %ld", (long int) check_limit);
+
+	while ((millis() - time_out) < check_limit)
 	{
 		byte fix_type = my_gnss.getFixType(); // Get the fix type
 		char fix_type_str[32] = {0};
@@ -175,7 +200,7 @@ bool poll_gnss(void)
 		// if ((fix_type >= 3) && (my_gnss.getSIV() >= 5))
 		if (fix_type >= 3)
 		{
-			digitalWrite(LED_CONN, HIGH);
+			// digitalWrite(LED_CONN, HIGH);
 			has_pos = true;
 			last_read_ok = true;
 			latitude = my_gnss.getLatitude();
@@ -230,8 +255,9 @@ bool poll_gnss(void)
 	if (has_pos)
 	{
 #if GNSS_OFF == 0
-		my_gnss.powerSaveMode(true);
 		my_gnss.setMeasurementRate(10000);
+		my_gnss.setNavigationFrequency(1, 10000);
+		my_gnss.powerSaveMode(true, 10000);
 #endif
 		return true;
 	}
@@ -243,10 +269,31 @@ bool poll_gnss(void)
 	}
 	last_read_ok = false;
 
-	digitalWrite(LED_CONN, LOW);
+	// digitalWrite(LED_CONN, LOW);
 
 #if GNSS_OFF == 0
 	my_gnss.setMeasurementRate(1000);
 #endif
 	return false;
+}
+
+void gnss_task(void *pvParameters)
+{
+	MYLOG("GNSS", "GNSS Task started");
+
+	while (1)
+	{
+		if (xSemaphoreTake(g_gnss_sem, portMAX_DELAY) == pdTRUE)
+		{
+			MYLOG("GNSS", "GNSS Task wake up");
+			// Get location
+			poll_gnss();
+			if (g_task_sem != NULL)
+			{
+				g_task_event_type |= GNSS_FIN;
+				xSemaphoreGiveFromISR(g_task_sem, &g_higher_priority_task_woken);
+			}
+			MYLOG("GNSS", "GNSS Task finished");
+		}
+	}
 }

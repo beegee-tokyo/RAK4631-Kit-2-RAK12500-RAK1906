@@ -41,6 +41,9 @@ void send_delayed(TimerHandle_t unused);
 /** Send Fail counter **/
 uint8_t send_fail = 0;
 
+/** Flag for low battery protection */
+bool low_batt_protection = false;
+
 /**
  * @brief Application specific setup functions
  * 
@@ -72,6 +75,15 @@ bool init_app(void)
 	// Initialize GNSS module
 	init_result = init_gnss();
 
+	// Prepare GNSS task
+	// Create the GNSS event semaphore
+	g_gnss_sem = xSemaphoreCreateBinary();
+	// Initialize semaphore
+	xSemaphoreGive(g_gnss_sem);
+	// Take semaphore
+	xSemaphoreTake(g_gnss_sem, 10);
+	init_result |= xTaskCreate(gnss_task, "LORA", 4096, NULL, TASK_PRIO_NORMAL, &gnss_task_handle);
+
 	// Initialize Temperature sensor
 	// init_result |= init_th();
 	init_result |= init_bme();
@@ -89,9 +101,6 @@ bool init_app(void)
 	// Set to 1/2 of programmed send interval or 30 seconds
 	delayed_sending.begin(min_delay, send_delayed, NULL, false);
 
-	// Power down GNSS module
-	// pinMode(WB_IO2, OUTPUT);
-	// digitalWrite(WB_IO2, LOW);
 	return init_result;
 }
 
@@ -114,97 +123,45 @@ void app_event_handler(void)
 			restart_advertising(15);
 		}
 
-		if (lora_busy)
-		{
-			MYLOG("APP", "LoRaWAN TX cycle not finished, skip this event");
-			if (g_ble_uart_is_connected)
-			{
-				g_ble_uart.println("LoRaWAN TX cycle not finished, skip this event");
-			}
-		}
-		else
+		if (!low_batt_protection)
 		{
 			// Wake up the temperature sensor and start measurements
-			// wake_th();
 			start_bme();
 
-			if (poll_gnss())
-			{
-				MYLOG("APP", "Valid GNSS position");
-				if (g_ble_uart_is_connected)
-				{
-					g_ble_uart.println("Valid GNSS position");
-				}
-			}
-			else
-			{
-				MYLOG("APP", "No valid GNSS position");
-				if (g_ble_uart_is_connected)
-				{
-					g_ble_uart.println("No valid GNSS position");
-				}
-			}
+			// Start the GNSS location tracking
+			xSemaphoreGive(g_gnss_sem);
+		}
 
-			// Get temperature and humidity data
-			// read_th();
-			read_bme();
+		// Get battery level
+		batt_level.batt16 = read_batt() / 10;
+		g_tracker_data.batt_1 = batt_level.batt8[1];
+		g_tracker_data.batt_2 = batt_level.batt8[0];
 
-			// Get battery level
-			// g_tracker_data.batt = mv_to_percent(read_batt());
-			batt_level.batt16 = read_batt() / 10;
-			g_tracker_data.batt_1 = batt_level.batt8[1];
-			g_tracker_data.batt_2 = batt_level.batt8[0];
+		// Protection against battery drain
+		if (batt_level.batt16 < 290)
+		{
+			// Battery is very low, change send time to 1 hour to protect battery
+			low_batt_protection = true;						   // Set low_batt_protection active
+			g_task_wakeup_timer.setPeriod(1 * 60 * 60 * 1000); // Set send time to one hour
+			g_task_wakeup_timer.reset();
+			MYLOG("APP", "Battery protection activated");
+		}
+		else if ((batt_level.batt16 > 410) && low_batt_protection)
+		{
+			// Battery is higher than 4V, change send time back to original setting
+			low_batt_protection = false;
+			g_task_wakeup_timer.setPeriod(g_lorawan_settings.send_repeat_time);
+			g_task_wakeup_timer.reset();
+			MYLOG("APP", "Battery protection deactivated");
+		}
 
-			// Remember last time sending
-			last_pos_send = millis();
-			// Just in case
-			delayed_active = false;
-
-#if MY_DEBUG == 1
-			uint8_t *packet = &g_tracker_data.data_flag1;
-			for (int idx = 0; idx < TRACKER_DATA_LEN; idx++)
-			{
-				Serial.printf("%02X", packet[idx]);
-			}
-			// Serial.printf("%02X", g_tracker_data.data_flag1);
-			// Serial.printf("%02X", g_tracker_data.data_flag2);
-			// Serial.printf("%02X", g_tracker_data.lat_1);
-			// Serial.printf("%02X", g_tracker_data.lat_2);
-			// Serial.printf("%02X", g_tracker_data.lat_3);
-			// Serial.printf("%02X", g_tracker_data.long_1);
-			// Serial.printf("%02X", g_tracker_data.long_2);
-			// Serial.printf("%02X", g_tracker_data.long_3);
-			// Serial.printf("%02X", g_tracker_data.alt_1);
-			// Serial.printf("%02X", g_tracker_data.alt_2);
-			// Serial.printf("%02X", g_tracker_data.alt_3);
-			// Serial.printf("%02X", g_tracker_data.data_flag3);
-			// Serial.printf("%02X", g_tracker_data.data_flag4);
-			// Serial.printf("%02X", g_tracker_data.batt_1);
-			// Serial.printf("%02X", g_tracker_data.batt_2);
-			// Serial.printf("%02X", g_tracker_data.data_flag5);
-			// Serial.printf("%02X", g_tracker_data.data_flag6);
-			// Serial.printf("%02X", g_tracker_data.humid_1);
-			// Serial.printf("%02X", g_tracker_data.data_flag7);
-			// Serial.printf("%02X", g_tracker_data.data_flag8);
-			// Serial.printf("%02X", g_tracker_data.temp_1);
-			// Serial.printf("%02X", g_tracker_data.temp_2);
-			// Serial.printf("%02X", g_tracker_data.data_flag9);
-			// Serial.printf("%02X", g_tracker_data.data_flag10);
-			// Serial.printf("%02X", g_tracker_data.press_1);
-			// Serial.printf("%02X", g_tracker_data.press_2);
-			// Serial.printf("%02X", g_tracker_data.data_flag11);
-			// Serial.printf("%02X", g_tracker_data.data_flag12);
-			// Serial.printf("%02X", g_tracker_data.gas_1);
-			// Serial.printf("%02X", g_tracker_data.gas_2);
-			Serial.println("");
-#endif
-
+		if (low_batt_protection)
+		{
 			lmh_error_status result = send_lora_packet((uint8_t *)&g_tracker_data, TRACKER_DATA_LEN);
 			switch (result)
 			{
 			case LMH_SUCCESS:
 				MYLOG("APP", "Packet enqueued");
-				/// \todo set a flag that TX cycle is running
 				lora_busy = true;
 				if (g_ble_uart_is_connected)
 				{
@@ -213,6 +170,7 @@ void app_event_handler(void)
 				break;
 			case LMH_BUSY:
 				MYLOG("APP", "LoRa transceiver is busy");
+				lora_busy = true;
 				if (g_ble_uart_is_connected)
 				{
 					g_ble_uart.println("LoRa transceiver is busy");
@@ -229,64 +187,63 @@ void app_event_handler(void)
 		}
 	}
 
-	// ACC trigger event
-	if ((g_task_event_type & ACC_TRIGGER) == ACC_TRIGGER)
+	// GNSS location search finished
+	if ((g_task_event_type & GNSS_FIN) == GNSS_FIN)
 	{
-		g_task_event_type &= N_ACC_TRIGGER;
-		MYLOG("APP", "ACC triggered");
+		g_task_event_type &= N_GNSS_FIN;
+
+		// Get temperature and humidity data
+		// read_th();
+		read_bme();
+
+		// Remember last time sending
+		last_pos_send = millis();
+		// Just in case
+		delayed_active = false;
+
+#if MY_DEBUG == 1
+		uint8_t *packet = &g_tracker_data.data_flag1;
+		for (int idx = 0; idx < TRACKER_DATA_LEN; idx++)
+		{
+			Serial.printf("%02X", packet[idx]);
+		}
+		Serial.println("");
 		if (g_ble_uart_is_connected)
 		{
-			g_ble_uart.println("ACC triggered");
-		}
-
-		// Check time since last send
-		bool send_now = true;
-		if (g_lorawan_settings.send_repeat_time != 0)
-		{
-			if ((millis() - last_pos_send) < min_delay)
+			for (int idx = 0; idx < TRACKER_DATA_LEN; idx++)
 			{
-				send_now = false;
-				if (!delayed_active)
-				{
-					delayed_sending.stop();
-					MYLOG("APP", "Expired time %d", (int)(millis() - last_pos_send));
-					MYLOG("APP", "Max delay time %d", (int)min_delay);
-					if (g_ble_uart_is_connected)
-					{
-						g_ble_uart.printf("Expired time %d\n", (millis() - last_pos_send));
-						g_ble_uart.printf("Max delay time %d\n", min_delay);
-					}
-					time_t wait_time = abs(min_delay - (millis() - last_pos_send) >= 0) ? (min_delay - (millis() - last_pos_send)) : min_delay;
-					MYLOG("APP", "Wait time %ld", (long)wait_time);
-					if (g_ble_uart_is_connected)
-					{
-						g_ble_uart.printf("Wait time %d\n", wait_time);
-					}
-
-					MYLOG("APP", "Only %lds since last position message, send delayed in %lds", (long)((millis() - last_pos_send) / 1000), (long)(wait_time / 1000));
-					if (g_ble_uart_is_connected)
-					{
-						g_ble_uart.printf("Only %ds since last pos msg, delay by %ds\n", ((millis() - last_pos_send) / 1000), (wait_time / 1000));
-					}
-					delayed_sending.setPeriod(wait_time);
-					delayed_sending.start();
-					delayed_active = true;
-				}
+				g_ble_uart.printf("%02X", packet[idx]);
 			}
+			g_ble_uart.println("");
 		}
-		if (send_now)
-		{
-			// Remember last send time
-			last_pos_send = millis();
+#endif
 
-			// Trigger a GNSS reading and packet sending
-			g_task_event_type |= STATUS;
-		}
-
-		// Reset the standard timer
-		if (g_lorawan_settings.send_repeat_time != 0)
+		lmh_error_status result = send_lora_packet((uint8_t *)&g_tracker_data, TRACKER_DATA_LEN);
+		switch (result)
 		{
-			g_task_wakeup_timer.reset();
+		case LMH_SUCCESS:
+			MYLOG("APP", "Packet enqueued");
+			/// \todo set a flag that TX cycle is running
+			lora_busy = true;
+			if (g_ble_uart_is_connected)
+			{
+				g_ble_uart.println("Packet enqueued");
+			}
+			break;
+		case LMH_BUSY:
+			MYLOG("APP", "LoRa transceiver is busy");
+			if (g_ble_uart_is_connected)
+			{
+				g_ble_uart.println("LoRa transceiver is busy");
+			}
+			break;
+		case LMH_ERROR:
+			MYLOG("APP", "Packet error, too big to send with current DR");
+			if (g_ble_uart_is_connected)
+			{
+				g_ble_uart.println("Packet error, too big to send with current DR");
+			}
+			break;
 		}
 	}
 }
