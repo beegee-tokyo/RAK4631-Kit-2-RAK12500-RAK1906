@@ -207,11 +207,6 @@ bool poll_gnss(void)
 			longitude = my_gnss.getLongitude();
 			altitude = my_gnss.getAltitude();
 
-			/// \todo  For testing, an address in Recife, Brazil, which has both latitude and longitude negative
-			// latitude = -80487740;
-			// longitude = -349021580;
-			// altitude = 156024;
-
 			MYLOG("GNSS", "Fixtype: %d %s", my_gnss.getFixType(), fix_type_str);
 			MYLOG("GNSS", "Lat: %.4f Lon: %.4f", latitude / 10000000.0, longitude / 10000000.0);
 			MYLOG("GNSS", "Alt: %.2f", altitude / 1000.0);
@@ -222,20 +217,23 @@ bool poll_gnss(void)
 				g_ble_uart.printf("Lat: %.4f Lon: %.4f\n", latitude / 10000000.0, longitude / 10000000.0);
 				g_ble_uart.printf("Alt: %.2f\n", altitude / 1000.0);
 			}
-			pos_union.val32 = latitude / 1000;
-			g_tracker_data.lat_1 = pos_union.val8[2];
-			g_tracker_data.lat_2 = pos_union.val8[1];
-			g_tracker_data.lat_3 = pos_union.val8[0];
+			pos_union.val32 = latitude / 10; //00;
+			g_tracker_data.lat_1 = pos_union.val8[3];
+			g_tracker_data.lat_2 = pos_union.val8[2];
+			g_tracker_data.lat_3 = pos_union.val8[1];
+			g_tracker_data.lat_4 = pos_union.val8[0];
 
-			pos_union.val32 = longitude / 1000;
-			g_tracker_data.long_1 = pos_union.val8[2];
-			g_tracker_data.long_2 = pos_union.val8[1];
-			g_tracker_data.long_3 = pos_union.val8[0];
+			pos_union.val32 = longitude / 10; //00;
+			g_tracker_data.long_1 = pos_union.val8[3];
+			g_tracker_data.long_2 = pos_union.val8[2];
+			g_tracker_data.long_3 = pos_union.val8[1];
+			g_tracker_data.long_4 = pos_union.val8[0];
 
 			pos_union.val32 = altitude / 10;
-			g_tracker_data.alt_1 = pos_union.val8[2];
-			g_tracker_data.alt_2 = pos_union.val8[1];
-			g_tracker_data.alt_3 = pos_union.val8[0];
+			g_tracker_data.alt_1 = pos_union.val8[3];
+			g_tracker_data.alt_2 = pos_union.val8[2];
+			g_tracker_data.alt_3 = pos_union.val8[1];
+			g_tracker_data.alt_4 = pos_union.val8[0];
 
 			// Break the while()
 			break;
@@ -261,6 +259,37 @@ bool poll_gnss(void)
 #endif
 		return true;
 	}
+	/// \todo Enable below to get a fake GPS position if no location fix could be obtained
+	// else
+	// {
+	// 	Serial.println("Faking GPS");
+	// 	/// \todo  For testing, an address in Recife, Brazil, which has both latitude and longitude negative
+	// 	// lat -8.0487740
+	// 	// long -34.9021580
+	// 	// alt 156.024
+	// 	// 14.4213730, 121.0069140, 35.000
+	// 	latitude = 144213730;
+	// 	longitude = 1210069140;
+	// 	altitude = 35000;
+
+	// 	pos_union.val32 = latitude / 10;
+	// 	g_tracker_data.lat_1 = pos_union.val8[3];
+	// 	g_tracker_data.lat_2 = pos_union.val8[2];
+	// 	g_tracker_data.lat_3 = pos_union.val8[1];
+	// 	g_tracker_data.lat_4 = pos_union.val8[0];
+
+	// 	pos_union.val32 = longitude / 10;
+	// 	g_tracker_data.long_1 = pos_union.val8[3];
+	// 	g_tracker_data.long_2 = pos_union.val8[2];
+	// 	g_tracker_data.long_3 = pos_union.val8[1];
+	// 	g_tracker_data.long_4 = pos_union.val8[0];
+
+	// 	pos_union.val32 = altitude / 10;
+	// 	g_tracker_data.alt_1 = pos_union.val8[3];
+	// 	g_tracker_data.alt_2 = pos_union.val8[2];
+	// 	g_tracker_data.alt_3 = pos_union.val8[1];
+	// 	g_tracker_data.alt_4 = pos_union.val8[0];
+	// }
 
 	MYLOG("GNSS", "No valid location found");
 	if (g_ble_uart_is_connected)

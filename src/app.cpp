@@ -75,15 +75,6 @@ bool init_app(void)
 	// Initialize GNSS module
 	init_result = init_gnss();
 
-	// Prepare GNSS task
-	// Create the GNSS event semaphore
-	g_gnss_sem = xSemaphoreCreateBinary();
-	// Initialize semaphore
-	xSemaphoreGive(g_gnss_sem);
-	// Take semaphore
-	xSemaphoreTake(g_gnss_sem, 10);
-	init_result |= xTaskCreate(gnss_task, "LORA", 4096, NULL, TASK_PRIO_NORMAL, &gnss_task_handle);
-
 	// Initialize Temperature sensor
 	// init_result |= init_th();
 	init_result |= init_bme();
@@ -344,6 +335,18 @@ void lora_data_handler(void)
 		if (g_join_result)
 		{
 			MYLOG("APP", "Successfully joined network");
+
+			// Prepare GNSS task
+			// Create the GNSS event semaphore
+			g_gnss_sem = xSemaphoreCreateBinary();
+			// Initialize semaphore
+			xSemaphoreGive(g_gnss_sem);
+			// Take semaphore
+			xSemaphoreTake(g_gnss_sem, 10);
+			if (!xTaskCreate(gnss_task, "LORA", 4096, NULL, TASK_PRIO_LOW, &gnss_task_handle))
+			{
+				MYLOG("APP", "Failed to start GNSS task");
+			}
 		}
 		else
 		{
