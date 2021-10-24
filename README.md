@@ -122,7 +122,8 @@ Keep in mind that parameters that are changed from with this method can be chang
 ----
 
 # Packet data format
-The packet data is made compatible with the [RAK5205/RAK7205](https://docs.rakwireless.com/Product-Categories/WisTrio/RAK7205-5205/Overview). A detailed explanation and encoders for TTN and Chirpstack can be found in the [RAK5205 Documentation](https://docs.rakwireless.com/Product-Categories/WisTrio/RAK7205-5205/Quickstart/#decoding-sensor-data-on-chirpstack-and-ttn)
+The packet data is made compatible with the [RAK5205/RAK7205](https://docs.rakwireless.com/Product-Categories/WisTrio/RAK7205-5205/Overview). A detailed explanation and encoders for TTN and Chirpstack can be found in the [RAK5205 Documentation](https://docs.rakwireless.com/Product-Categories/WisTrio/RAK7205-5205/Quickstart/#decoding-sensor-data-on-chirpstack-and-ttn).    
+Packet parser for Chirpstack and Datacake are in the repo ==> [Chirpstack-decode.js](./Chirpstack-decode.js) and [Datacake-decode.js](./Datacake-decode.js)
 
 ## _REMARK_
 This application does not include the RAK1904 acceleration sensor, so the data packet does not include the accelerometer part.

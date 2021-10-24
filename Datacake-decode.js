@@ -1,5 +1,7 @@
-function Decoder(payload, port) {
-	var hexString = bin2HexStr(payload);
+// The function must return an object, e.g. {"temperature": 22.5}
+function Decoder(bytes, port) {
+
+	var hexString = bin2HexStr(bytes);
 
 	var decoded = rakSensorDataDecode(hexString);
 
@@ -8,8 +10,10 @@ function Decoder(payload, port) {
 	decoded.LORA_SNR = (!!normalizedPayload.gateways && !!normalizedPayload.gateways[0] && normalizedPayload.gateways[0].snr) || 0;
 	decoded.LORA_DATARATE = normalizedPayload.data_rate;
 
+
 	// Transform Lat + Long into location
-	if (decoded.latitude) {
+	if (decoded.hasFix == 1) {
+		// if (decoded.latitude != 0.0) {
 		decoded.location = "(" + decoded.latitude + "," + decoded.longitude + ")";
 	}
 
@@ -53,6 +57,12 @@ function parseTriple(str, base) {
 	return (n << 8) >> 8;
 }
 
+// convert string to Quadruple bytes integer
+function parseQuadruple(str, base) {
+	var n = parseInt(str, base);
+	return (n << 32) >> 32;
+}
+
 // decode Hex sensor string data to object
 function rakSensorDataDecode(hexStr) {
 	var str = hexStr;
@@ -66,7 +76,7 @@ function rakSensorDataDecode(hexStr) {
 				str = str.substring(6);
 				break;
 			case 0x0673:// Atmospheric pressure
-				myObj.pressure = parseFloat((parseShort(str.substring(4, 8), 16) * 0.1).toFixed(2));// + "hPa";//unit:hPa
+				myObj.barometer = parseFloat((parseShort(str.substring(4, 8), 16) * 0.1).toFixed(2));// + "hPa";//unit:hPa
 				str = str.substring(8);
 				break;
 			case 0x0267:// Temperature
@@ -74,10 +84,15 @@ function rakSensorDataDecode(hexStr) {
 				str = str.substring(8);
 				break;
 			case 0x0188:// GPS
-				myObj.latitude = parseFloat((parseTriple(str.substring(4, 10), 16) * 0.0001).toFixed(4));// + "°";//unit:°
-				myObj.longitude = parseFloat((parseTriple(str.substring(10, 16), 16) * 0.0001).toFixed(4));// + "°";//unit:°
-				myObj.altitude = parseFloat((parseTriple(str.substring(16, 22), 16) * 0.01).toFixed(1));// + "m";//unit:m
-				str = str.substring(22);
+				myObj.latitude = parseFloat((parseQuadruple(str.substring(4, 12), 16) * 0.000001).toFixed(6));// + "'";
+				myObj.longitude = parseFloat((parseQuadruple(str.substring(12, 20), 16) * 0.000001).toFixed(6));// + "'";
+				myObj.altitude = parseFloat((parseQuadruple(str.substring(20, 28), 16) * 0.01).toFixed(1));// + "m";
+				str = str.substring(28);
+				if ((myObj.latitude == 0.0) && (myObj.longitude == 0.0)) {
+					myObj.hasFix = 0;
+				} else {
+					myObj.hasFix = 1;
+				}
 				break;
 			case 0x0371:// Triaxial acceleration
 				myObj.acceleration_x = parseFloat((parseShort(str.substring(4, 8), 16) * 0.001).toFixed(3));// + "g";//unit:g
@@ -90,7 +105,7 @@ function rakSensorDataDecode(hexStr) {
 				str = str.substring(8);
 				break;
 			case 0x0802:// Battery Voltage
-				myObj.batt = parseFloat((parseShort(str.substring(4, 8), 16) * 0.01).toFixed(2));// + "V";//unit:V
+				myObj.battery = parseFloat((parseShort(str.substring(4, 8), 16) * 0.01).toFixed(2));// + "V";//unit:V
 				str = str.substring(8);
 				break;
 			case 0x0586:// gyroscope
